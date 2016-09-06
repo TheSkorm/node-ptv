@@ -5,8 +5,14 @@ var request = require('request');
 
 var endpoint = "http://timetableapi.ptv.vic.gov.au";
 
+/** Returns an HMAC SHA1 signature from the request beginning at /v2 (inclusive)
+*  and ending at devid=xxxxx (inclusive).
+* @param {String} key your API key as provided by PTV.
+* @param {String} url the url of the request from /v2 (inclusive) to the beginning
+*                     of any query parameters.
+* @param {Object} args the names and values of the query parameters.
+*/
 function createSignature(key, url, args) {
-  console.log(urlFormat({pathname: '/v2' + url, query: args}));
   return crypto.createHmac('sha1', key)
     .update(urlFormat({pathname: '/v2' + url, query: args}))
     .digest('hex').toUpperCase();
@@ -14,7 +20,7 @@ function createSignature(key, url, args) {
 
 
 module.exports = PTV;
-module.exports.createClient = function(opts) {
+module.exports.createClient = function (opts) {
   return new PTV(opts);
 };
 
@@ -37,7 +43,6 @@ PTV.mode = {
   vline: 3,
   nightbus: 4
 };
-
 PTV.modeName = ['train', 'tram', 'bus', 'vline', 'nightbus'];
 
 // definition of transport POIs.
@@ -51,7 +56,15 @@ PTV.poi = {
 };
 
 // definition of disruption modes.
-PTV.disruptionModes = ["general", "metro-bus", "metro-train", "metro-tram", "regional-bus", "regional-coach", "regional-train"];
+PTV.disruptionModes = {
+  general: 'general',
+  metro_bus: 'metro-bus',
+  metro_train: 'metro-train',
+  metro_tram: 'metro-tram',
+  regional_bus: 'regional-bus',
+  regional_coach: 'regional-coach',
+  regional_train: 'regional-train'
+};
 
 /** Calls the API with the supplied URL and query parameters, and executes
 * the supplied callback when finished.
@@ -62,7 +75,7 @@ PTV.disruptionModes = ["general", "metro-bus", "metro-train", "metro-tram", "reg
 * @param {Function} cb the callback function to execute once the results
 *                      have been returned from the API call.
 */
-PTV.prototype._callAPI = function(url, params, cb) {
+PTV.prototype._callAPI = function (url, params, cb) {
   var result;
   var query = {};
   if (params) {
@@ -78,7 +91,7 @@ PTV.prototype._callAPI = function(url, params, cb) {
   request({
     url: endpoint + '/v2' + url,
     qs: query
-  }, function(error, response, body) {
+  }, function (error, response, body) {
     ptv._activeReqs--;
     if (!error && response.statusCode == 200) {
       try {
@@ -95,17 +108,37 @@ PTV.prototype._callAPI = function(url, params, cb) {
   });
 };
 
+/** Returns the output of the healthcheck.
+* @param{Function} cb the callback function to execute once the results
+*                     have been returned from the API call.
+*/
+PTV.prototype.healthcheck = function (cb) {
+  var queryParams = {
+    timestamp: new Date().toUTCString()
+  };
+  this._callAPI(
+    '/healthcheck',
+    queryParams,
+    function (err, res) {
+      if (err) return cb(err);
+      return cb(null, res);
+    }
+  );
+};
+
 /** Returns up to 30 stops nearest to a specified coordinate.
 * @param {number} latitude latitude expressed in decimal degrees.
 * @param {number} longitude longitude expressed in decimal degrees.
+* @param{Function} cb the callback function to execute once the results
+*                     have been returned from the API call.
 */
-PTV.prototype.stopsNearby = function(latitude, longitude, cb) {
+PTV.prototype.stopsNearby = function (latitude, longitude, cb) {
   this._callAPI(
     util.format('/nearme/latitude/%d/longitude/%d', latitude, longitude),
     null,
-    function(err, res) {
+    function (err, res) {
       if (err) return cb(err);
-      return cb(null, res.map(function(s) { return s.result; }));
+      return cb(null, res.map(function (s) { return s.result; }));
     }
   );
 };
@@ -128,13 +161,13 @@ PTV.prototype.stopsNearby = function(latitude, longitude, cb) {
 * @param{Function} cb the callback function to execute once the results
 *                     have been returned from the API call.
 */
-PTV.prototype.transportPOIsByMap = function(poi, lat1, long1, lat2, long2,
+PTV.prototype.transportPOIsByMap = function (poi, lat1, long1, lat2, long2,
   griddepth, limit, cb) {
   this._callAPI(
     util.format('/poi/%s/lat1/%d/long1/%d/lat2/%d/long2/%d/griddepth/%d/limit/%d',
       encodeURI(poi), lat1, long1, lat2, long2, griddepth, limit),
     null,
-    function(err, res) {
+    function (err, res) {
       if (err) return cb(err);
       cb(null, res);
     }
@@ -146,11 +179,11 @@ PTV.prototype.transportPOIsByMap = function(poi, lat1, long1, lat2, long2,
 * @param{Function} cb the callback function to execute once the results
 *                     have been returned from the API call.
 */
-PTV.prototype.search = function(what, cb) {
+PTV.prototype.search = function (what, cb) {
   this._callAPI(
     '/search/' + encodeURI(what),
     null,
-    function(err, res) {
+    function (err, res) {
       if (err) return cb(err);
       cb(null, res);
     }
@@ -166,12 +199,12 @@ PTV.prototype.search = function(what, cb) {
 * @param{Function} cb the callback function to execute once the results
 *                     have been returned from the API call.
 */
-PTV.prototype.broadNextDepartures = function(mode, stop, limit, cb) {
+PTV.prototype.broadNextDepartures = function (mode, stop, limit, cb) {
   this._callAPI(
     util.format('/mode/%d/stop/%d/departures/by-destination/limit/%d',
       mode, stop, limit),
     null,
-    function(err, res) {
+    function (err, res) {
       if (err) return cb(err);
       cb(null, res.values);
     }
@@ -190,7 +223,7 @@ PTV.prototype.broadNextDepartures = function(mode, stop, limit, cb) {
 * @param{Function} cb the callback function to execute once the results
 *                     have been returned from the API call.
 */
-PTV.prototype.specificNextDepartures = function(mode, line, stop,
+PTV.prototype.specificNextDepartures = function (mode, line, stop,
   directionid, limit, date, cb) {
   if (!date)
     date = new Date();
@@ -201,7 +234,7 @@ PTV.prototype.specificNextDepartures = function(mode, line, stop,
     util.format('/mode/%d/line/%d/stop/%d/directionid/%d/departures/all/limit/%d',
       mode, line, stop, directionid, limit),
     queryParams,
-    function(err, res) {
+    function (err, res) {
       if (err) return cb(err);
       cb(null, res);
     }
@@ -219,7 +252,7 @@ PTV.prototype.specificNextDepartures = function(mode, line, stop,
 * @param{Function} cb the callback function to execute once the results
 *                     have been returned from the API call.
 */
-PTV.prototype.stoppingPattern = function(mode, run, stop, date, cb) {
+PTV.prototype.stoppingPattern = function (mode, run, stop, date, cb) {
   if (!date)
     date = new Date();
   var queryParams = {
@@ -229,7 +262,7 @@ PTV.prototype.stoppingPattern = function(mode, run, stop, date, cb) {
     util.format('/mode/%d/run/%d/stop/%d/stopping-pattern',
       mode, run, stop),
     queryParams,
-    function(err, res) {
+    function (err, res) {
       if (err) return cb(err);
       cb(null, res);
     }
@@ -243,12 +276,12 @@ PTV.prototype.stoppingPattern = function(mode, run, stop, date, cb) {
 * @param{Function} cb the callback function to execute once the results
 *                     have been returned from the API call.
 */
-PTV.prototype.stopsOnALine = function(mode, line, cb) {
+PTV.prototype.stopsOnALine = function (mode, line, cb) {
   this._callAPI(
     util.format('/mode/%d/line/%d/stops-for-line',
       mode, line),
     null,
-    function(err, res) {
+    function (err, res) {
       if (err) return cb(err);
       cb(null, res);
     }
@@ -262,7 +295,7 @@ PTV.prototype.stopsOnALine = function(mode, line, cb) {
 * @param{Function} cb the callback function to execute once the results
 *                     have been returned from the API call.
 */
-PTV.prototype.linesByMode = function(mode, name, cb) {
+PTV.prototype.linesByMode = function (mode, name, cb) {
   var queryParams = {
     name: name
   };
@@ -270,7 +303,7 @@ PTV.prototype.linesByMode = function(mode, name, cb) {
     util.format('/lines/mode/%d',
       mode),
     queryParams,
-    function(err, res) {
+    function (err, res) {
       if (err) return cb(err);
       cb(null, res);
     }
@@ -288,7 +321,7 @@ PTV.prototype.linesByMode = function(mode, name, cb) {
 * @param{Function} cb the callback function to execute once the results
 *                     have been returned from the API call.
 */
-PTV.prototype.stopFacilities = function(stop, mode, location, amenity, accessibility, cb) {
+PTV.prototype.stopFacilities = function (stop, mode, location, amenity, accessibility, cb) {
   var queryParams = {
     stop_id: stop,
     route_type: mode,
@@ -299,7 +332,7 @@ PTV.prototype.stopFacilities = function(stop, mode, location, amenity, accessibi
   this._callAPI(
     '/stops',
     queryParams,
-    function(err, res) {
+    function (err, res) {
       if (err) return cb(err);
       cb(null, res);
     }
@@ -312,12 +345,12 @@ PTV.prototype.stopFacilities = function(stop, mode, location, amenity, accessibi
 * @param{Function} cb the callback function to execute once the results
 *                     have been returned from the API call.
 */
-PTV.prototype.disruptions = function(modes, cb) {
+PTV.prototype.disruptions = function (modes, cb) {
   this._callAPI(
     util.format('/disruptions/modes/%s',
       modes),
     null,
-    function(err, res) {
+    function (err, res) {
       if (err) return cb(err);
       cb(null, res);
     }
