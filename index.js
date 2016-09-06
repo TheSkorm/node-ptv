@@ -5,6 +5,7 @@ var request = require('request');
 
 var endpoint = 'http://timetableapi.ptv.vic.gov.au';
 
+<<<<<<< HEAD
 /** Returns an HMAC SHA1 signature from the request beginning at /v2 (inclusive)
 *	and ending at devid=xxxxx (inclusive).
 * @param {String} key your API key as provided by PTV.
@@ -16,11 +17,21 @@ function createSignature (key, url, args) {
 	return crypto.createHmac('sha1', key)
 		.update(urlFormat({pathname: '/v2' + url, query: args}))
 		.digest('hex').toUpperCase();
+=======
+function createSignature(key, url, args) {
+  return crypto.createHmac('sha1', key)
+    .update(urlFormat({pathname: '/v2' + url, query: args}))
+    .digest('hex').toUpperCase();
+>>>>>>> origin/api-2.2.0-features
 }
 
 module.exports = PTV;
 module.exports.createClient = function (opts) {
+<<<<<<< HEAD
 	return new PTV(opts);
+=======
+  return new PTV(opts);
+>>>>>>> origin/api-2.2.0-features
 };
 
 /** Initialises the object with a devId and API key.
@@ -56,6 +67,7 @@ PTV.poi = {
 
 // definition of disruption modes.
 PTV.disruptionModes = {
+<<<<<<< HEAD
 	general: 'general',
 	metro_bus: 'metro-bus',
 	metro_train: 'metro-train',
@@ -63,6 +75,15 @@ PTV.disruptionModes = {
 	regional_bus: 'regional-bus',
 	regional_coach: 'regional-coach',
 	regional_train: 'regional-train'
+=======
+  general: 'general',
+  metro_bus: 'metro-bus',
+  metro_train: 'metro-train',
+  metro_tram: 'metro-tram',
+  regional_bus: 'regional-bus',
+  regional_coach: 'regional-coach',
+  regional_train: 'regional-train'
+>>>>>>> origin/api-2.2.0-features
 };
 
 /** Calls the API with the supplied URL and query parameters, and executes
@@ -75,6 +96,7 @@ PTV.disruptionModes = {
 *											have been returned from the API call.
 */
 PTV.prototype._callAPI = function (url, params, cb) {
+<<<<<<< HEAD
 	var result;
 	var query = {};
 	if (params) {
@@ -124,6 +146,38 @@ PTV.prototype.healthcheck = function (cb) {
 			return cb(null, res);
 		}
 	);
+=======
+  var result;
+  var query = {};
+  if (params) {
+    for (var prop in params) {
+      query[prop] = params[prop];
+    }
+  }
+  query.devid = this.devId;
+  var signature = createSignature(this.key, url, query);
+  query.signature = signature;
+  this._activeReqs++;
+  var ptv = this;
+  request({
+    url: endpoint + '/v2' + url,
+    qs: query
+  }, function (error, response, body) {
+    ptv._activeReqs--;
+    if (!error && response.statusCode == 200) {
+      try {
+        result = JSON.parse(body);
+      } catch(e) {
+        return cb(e);
+      }
+      cb(null, result);
+    } else {
+      if (error)
+        return cb(error);
+      cb(response.statusCode);
+    }
+  });
+>>>>>>> origin/api-2.2.0-features
 };
 
 /** Returns up to 30 stops nearest to a specified coordinate.
@@ -133,6 +187,7 @@ PTV.prototype.healthcheck = function (cb) {
 *										 have been returned from the API call.
 */
 PTV.prototype.stopsNearby = function (latitude, longitude, cb) {
+<<<<<<< HEAD
 	this._callAPI(
 		util.format('/nearme/latitude/%d/longitude/%d', latitude, longitude),
 		null,
@@ -141,6 +196,16 @@ PTV.prototype.stopsNearby = function (latitude, longitude, cb) {
 			return cb(null, res.map(function (s) { return s.result; }));
 		}
 	);
+=======
+  this._callAPI(
+    util.format('/nearme/latitude/%d/longitude/%d', latitude, longitude),
+    null,
+    function (err, res) {
+      if (err) return cb(err);
+      return cb(null, res.map(function (s) { return s.result; }));
+    }
+  );
+>>>>>>> origin/api-2.2.0-features
 };
 
 /** Returns a set of locations consisting of stops and/or myki ticket outlets
@@ -162,6 +227,7 @@ PTV.prototype.stopsNearby = function (latitude, longitude, cb) {
 *										 have been returned from the API call.
 */
 PTV.prototype.transportPOIsByMap = function (poi, lat1, long1, lat2, long2,
+<<<<<<< HEAD
 	griddepth, limit, cb) {
 	this._callAPI(
 		util.format('/poi/%s/lat1/%d/long1/%d/lat2/%d/long2/%d/griddepth/%d/limit/%d',
@@ -172,6 +238,18 @@ PTV.prototype.transportPOIsByMap = function (poi, lat1, long1, lat2, long2,
 			cb(null, res);
 		}
 	);
+=======
+  griddepth, limit, cb) {
+  this._callAPI(
+    util.format('/poi/%s/lat1/%d/long1/%d/lat2/%d/long2/%d/griddepth/%d/limit/%d',
+      encodeURI(poi), lat1, long1, lat2, long2, griddepth, limit),
+    null,
+    function (err, res) {
+      if (err) return cb(err);
+      cb(null, res);
+    }
+  );
+>>>>>>> origin/api-2.2.0-features
 };
 
 /** Returns all stops and lines that match the search terms.
@@ -180,6 +258,7 @@ PTV.prototype.transportPOIsByMap = function (poi, lat1, long1, lat2, long2,
 *										 have been returned from the API call.
 */
 PTV.prototype.search = function (what, cb) {
+<<<<<<< HEAD
 	this._callAPI(
 		'/search/' + encodeURI(what),
 		null,
@@ -188,6 +267,16 @@ PTV.prototype.search = function (what, cb) {
 			cb(null, res);
 		}
 	);
+=======
+  this._callAPI(
+    '/search/' + encodeURI(what),
+    null,
+    function (err, res) {
+      if (err) return cb(err);
+      cb(null, res);
+    }
+  );
+>>>>>>> origin/api-2.2.0-features
 };
 
 /** Returns the next departures at a given stop for any line and
@@ -200,6 +289,7 @@ PTV.prototype.search = function (what, cb) {
 *										 have been returned from the API call.
 */
 PTV.prototype.broadNextDepartures = function (mode, stop, limit, cb) {
+<<<<<<< HEAD
 	this._callAPI(
 		util.format('/mode/%d/stop/%d/departures/by-destination/limit/%d',
 			mode, stop, limit),
@@ -209,6 +299,17 @@ PTV.prototype.broadNextDepartures = function (mode, stop, limit, cb) {
 			cb(null, res.values);
 		}
 	);
+=======
+  this._callAPI(
+    util.format('/mode/%d/stop/%d/departures/by-destination/limit/%d',
+      mode, stop, limit),
+    null,
+    function (err, res) {
+      if (err) return cb(err);
+      cb(null, res.values);
+    }
+  );
+>>>>>>> origin/api-2.2.0-features
 };
 
 /** Returns the next departures as a given stop for a specified mode, line,
@@ -224,6 +325,7 @@ PTV.prototype.broadNextDepartures = function (mode, stop, limit, cb) {
 *										 have been returned from the API call.
 */
 PTV.prototype.specificNextDepartures = function (mode, line, stop,
+<<<<<<< HEAD
 	directionid, limit, date, cb) {
 	if (!date) {
 		date = new Date();
@@ -240,6 +342,23 @@ PTV.prototype.specificNextDepartures = function (mode, line, stop,
 			cb(null, res);
 		}
 	);
+=======
+  directionid, limit, date, cb) {
+  if (!date)
+    date = new Date();
+  var queryParams = {
+    for_utc: date.toISOString()
+  };
+  this._callAPI(
+    util.format('/mode/%d/line/%d/stop/%d/directionid/%d/departures/all/limit/%d',
+      mode, line, stop, directionid, limit),
+    queryParams,
+    function (err, res) {
+      if (err) return cb(err);
+      cb(null, res);
+    }
+  );
+>>>>>>> origin/api-2.2.0-features
 };
 
 /** Returns the stopping pattern (details of the service) for a given run and
@@ -254,6 +373,7 @@ PTV.prototype.specificNextDepartures = function (mode, line, stop,
 *										 have been returned from the API call.
 */
 PTV.prototype.stoppingPattern = function (mode, run, stop, date, cb) {
+<<<<<<< HEAD
 	if (!date) {
 		date = new Date();
 	}
@@ -269,6 +389,22 @@ PTV.prototype.stoppingPattern = function (mode, run, stop, date, cb) {
 			cb(null, res);
 		}
 	);
+=======
+  if (!date)
+    date = new Date();
+  var queryParams = {
+    for_utc: date.toISOString()
+  };
+  this._callAPI(
+    util.format('/mode/%d/run/%d/stop/%d/stopping-pattern',
+      mode, run, stop),
+    queryParams,
+    function (err, res) {
+      if (err) return cb(err);
+      cb(null, res);
+    }
+  );
+>>>>>>> origin/api-2.2.0-features
 };
 
 /** Returns all stops on a given line of a transport mode.
@@ -279,6 +415,7 @@ PTV.prototype.stoppingPattern = function (mode, run, stop, date, cb) {
 *										 have been returned from the API call.
 */
 PTV.prototype.stopsOnALine = function (mode, line, cb) {
+<<<<<<< HEAD
 	this._callAPI(
 		util.format('/mode/%d/line/%d/stops-for-line',
 			mode, line),
@@ -288,6 +425,17 @@ PTV.prototype.stopsOnALine = function (mode, line, cb) {
 			cb(null, res);
 		}
 	);
+=======
+  this._callAPI(
+    util.format('/mode/%d/line/%d/stops-for-line',
+      mode, line),
+    null,
+    function (err, res) {
+      if (err) return cb(err);
+      cb(null, res);
+    }
+  );
+>>>>>>> origin/api-2.2.0-features
 };
 
 /** Returns all lines for a given mode of transport.
@@ -298,6 +446,7 @@ PTV.prototype.stopsOnALine = function (mode, line, cb) {
 *										 have been returned from the API call.
 */
 PTV.prototype.linesByMode = function (mode, name, cb) {
+<<<<<<< HEAD
 	var queryParams = {
 		name: name
 	};
@@ -310,6 +459,20 @@ PTV.prototype.linesByMode = function (mode, name, cb) {
 			cb(null, res);
 		}
 	);
+=======
+  var queryParams = {
+    name: name
+  };
+  this._callAPI(
+    util.format('/lines/mode/%d',
+      mode),
+    queryParams,
+    function (err, res) {
+      if (err) return cb(err);
+      cb(null, res);
+    }
+  );
+>>>>>>> origin/api-2.2.0-features
 };
 
 /** Returns the facilities available at a given metro train or V/Line stop.
@@ -324,6 +487,7 @@ PTV.prototype.linesByMode = function (mode, name, cb) {
 *										 have been returned from the API call.
 */
 PTV.prototype.stopFacilities = function (stop, mode, location, amenity, accessibility, cb) {
+<<<<<<< HEAD
 	var queryParams = {
 		stop_id: stop,
 		route_type: mode,
@@ -339,6 +503,23 @@ PTV.prototype.stopFacilities = function (stop, mode, location, amenity, accessib
 			cb(null, res);
 		}
 	);
+=======
+  var queryParams = {
+    stop_id: stop,
+    route_type: mode,
+    location: location,
+    amenity: amenity,
+    accessibility: accessibility
+  };
+  this._callAPI(
+    '/stops',
+    queryParams,
+    function (err, res) {
+      if (err) return cb(err);
+      cb(null, res);
+    }
+  );
+>>>>>>> origin/api-2.2.0-features
 };
 
 /** Returns planned and unplanned disruptions for given transport modes.
@@ -347,6 +528,7 @@ PTV.prototype.stopFacilities = function (stop, mode, location, amenity, accessib
 * @param{Function} cb the callback function to execute once the results
 *										 have been returned from the API call.
 */
+<<<<<<< HEAD
 PTV.prototype.disruptions = function (modes, cb) {
 	this._callAPI(
 		util.format('/disruptions/modes/%s',
@@ -357,4 +539,16 @@ PTV.prototype.disruptions = function (modes, cb) {
 			cb(null, res);
 		}
 	);
+=======
+PTV.prototype.disruptions = function  (modes, cb) {
+  this._callAPI(
+    util.format('/disruptions/modes/%s',
+      modes),
+    null,
+    function  (err, res) {
+      if (err) return cb(err);
+      cb(null, res);
+    }
+  );
+>>>>>>> origin/api-2.2.0-features
 };
